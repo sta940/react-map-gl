@@ -21,6 +21,8 @@ import {createElement} from 'react';
 import PropTypes from 'prop-types';
 import DraggableControl from './draggable-control';
 
+// import {InteractiveContext} from './interactive-map';
+
 const propTypes = Object.assign({}, DraggableControl.propTypes, {
   // Custom className
   className: PropTypes.string,
@@ -53,26 +55,33 @@ const defaultProps = Object.assign({}, DraggableControl.defaultProps, {
  * recalculate the marker's position when the parent re-renders.
  */
 export default class Marker extends DraggableControl {
+
   render() {
-    const {className, longitude, latitude, offsetLeft, offsetTop} = this.props;
-    const {dragPos, dragOffset} = this.state;
+    return (
+      createElement('InteractiveContext.Consumer',
+        null, context => {
+          const {className, longitude, latitude, offsetLeft, offsetTop} = this.props;
+          const {dragPos, dragOffset} = this.state;
 
-    const [x, y] = dragPos ?
-      this._getDraggedPosition(dragPos, dragOffset) :
-      this.context.viewport.project([longitude, latitude]);
+          const [x, y] = dragPos ?
+            this._getDraggedPosition(dragPos, dragOffset) :
+            context.viewport.project([longitude, latitude]);
 
-    const containerStyle = {
-      position: 'absolute',
-      left: x + offsetLeft,
-      top: y + offsetTop
-    };
+          const containerStyle = {
+            position: 'absolute',
+            left: x + offsetLeft,
+            top: y + offsetTop
+          };
 
-    return createElement('div', {
-      className: `mapboxgl-marker ${className}`,
-      ref: this._onContainerLoad,
-      style: containerStyle,
-      children: this.props.children
-    });
+          return createElement('div', {
+            className: `mapboxgl-marker ${className}`,
+            ref: this._onContainerLoad,
+            style: containerStyle,
+            children: this.props.children
+          });
+        }
+      )
+    );
   }
 
 }
@@ -80,3 +89,4 @@ export default class Marker extends DraggableControl {
 Marker.displayName = 'Marker';
 Marker.propTypes = propTypes;
 Marker.defaultProps = defaultProps;
+

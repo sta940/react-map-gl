@@ -7,6 +7,8 @@ import TransitionManager from '../utils/transition-manager';
 
 import deprecateWarn from '../utils/deprecate-warn';
 
+// import {InteractiveContext} from "./interactive-map";
+
 const LINEAR_TRANSITION_PROPS = Object.assign({}, TransitionManager.defaultProps, {
   transitionDuration: 300
 });
@@ -45,29 +47,56 @@ export default class NavigationControl extends BaseControl {
   }
 
   shouldComponentUpdate(nextProps, nextState, nextContext) {
-    return this.context.viewport.bearing !== nextContext.viewport.bearing;
+    return (
+      createElement('InteractiveContext.Consumer',
+        null, context => {
+          return context.viewport.bearing !== nextContext.viewport.bearing;
+        }
+      )
+    );
   }
 
   _updateViewport(opts) {
-    const {viewport} = this.context;
-    const mapState = new MapState(Object.assign({}, viewport, opts));
-    const viewState = Object.assign({}, mapState.getViewportProps(), LINEAR_TRANSITION_PROPS);
+    return (
+      createElement('InteractiveContext.Consumer',
+        null, context => {
+          const {viewport} = context;
+          const mapState = new MapState(Object.assign({}, viewport, opts));
+          const viewState = Object.assign({}, mapState.getViewportProps(), LINEAR_TRANSITION_PROPS);
 
-    // Call new style callback
-    this.props.onViewStateChange({viewState});
+          // Call new style callback
+          this.props.onViewStateChange({viewState});
 
-    // Call old style callback
-    // TODO(deprecate): remove this check when `onChangeViewport` gets deprecated
-    const onViewportChange = this.props.onChangeViewport || this.props.onViewportChange;
-    onViewportChange(viewState);
+          // Call old style callback
+          // TODO(deprecate): remove this check when `onChangeViewport` gets deprecated
+          const onViewportChange = this.props.onChangeViewport || this.props.onViewportChange;
+          onViewportChange(viewState);
+        }
+      )
+    );
+
   }
 
   _onZoomIn = () => {
-    this._updateViewport({zoom: this.context.viewport.zoom + 1});
+    return (
+      createElement('InteractiveContext.Consumer',
+        null, context => {
+          this._updateViewport({zoom: context.viewport.zoom + 1});
+        }
+      )
+    );
+
   }
 
   _onZoomOut = () => {
-    this._updateViewport({zoom: this.context.viewport.zoom - 1});
+    return (
+      createElement('InteractiveContext.Consumer',
+        null, context => {
+          this._updateViewport({zoom: context.viewport.zoom - 1});
+        }
+      )
+    );
+
   }
 
   _onResetNorth = () => {
@@ -75,11 +104,18 @@ export default class NavigationControl extends BaseControl {
   }
 
   _renderCompass() {
-    const {bearing} = this.context.viewport;
-    return createElement('span', {
-      className: 'mapboxgl-ctrl-compass-arrow',
-      style: {transform: `rotate(${bearing}deg)`}
-    });
+    return (
+      createElement('InteractiveContext.Consumer',
+        null, context => {
+          const {bearing} = context.viewport;
+          return createElement('span', {
+            className: 'mapboxgl-ctrl-compass-arrow',
+            style: {transform: `rotate(${bearing}deg)`}
+          });
+        }
+      )
+    );
+
   }
 
   _renderButton(type, label, callback, children) {

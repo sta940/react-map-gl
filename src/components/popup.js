@@ -23,6 +23,8 @@ import BaseControl from './base-control';
 
 import {getDynamicPosition, ANCHOR_POSITION} from '../utils/dynamic-position';
 
+// import {InteractiveContext} from "./interactive-map";
+
 const propTypes = Object.assign({}, BaseControl.propTypes, {
   // Custom className
   className: PropTypes.string,
@@ -81,21 +83,28 @@ export default class Popup extends BaseControl {
   }
 
   _getPosition(x, y) {
-    const {viewport} = this.context;
-    const {anchor, dynamicPosition, tipSize} = this.props;
+    return (
+      createElement('InteractiveContext.Consumer',
+        null, context => {
+          const {viewport} = context;
+          const {anchor, dynamicPosition, tipSize} = this.props;
 
-    if (this._content) {
-      return dynamicPosition ? getDynamicPosition({
-        x, y, anchor,
-        padding: tipSize,
-        width: viewport.width,
-        height: viewport.height,
-        selfWidth: this._content.clientWidth,
-        selfHeight: this._content.clientHeight
-      }) : anchor;
-    }
+          if (this._content) {
+            return dynamicPosition ? getDynamicPosition({
+              x, y, anchor,
+              padding: tipSize,
+              width: viewport.width,
+              height: viewport.height,
+              selfWidth: this._content.clientWidth,
+              selfHeight: this._content.clientHeight
+            }) : anchor;
+          }
 
-    return anchor;
+          return anchor;
+        }
+      )
+    );
+
   }
 
   /*
@@ -153,28 +162,35 @@ export default class Popup extends BaseControl {
   }
 
   render() {
-    const {className, longitude, latitude, offsetLeft, offsetTop} = this.props;
+    return (
+      createElement('InteractiveContext.Consumer',
+        null, context => {
+          const {className, longitude, latitude, offsetLeft, offsetTop} = this.props;
 
-    const [x, y] = this.context.viewport.project([longitude, latitude]);
+          const [x, y] = context.viewport.project([longitude, latitude]);
 
-    const positionType = this._getPosition(x, y);
-    const anchorPosition = ANCHOR_POSITION[positionType];
+          const positionType = this._getPosition(x, y);
+          const anchorPosition = ANCHOR_POSITION[positionType];
 
-    const containerStyle = {
-      position: 'absolute',
-      left: x + offsetLeft,
-      top: y + offsetTop,
-      transform: `translate(${-anchorPosition.x * 100}%, ${-anchorPosition.y * 100}%)`
-    };
+          const containerStyle = {
+            position: 'absolute',
+            left: x + offsetLeft,
+            top: y + offsetTop,
+            transform: `translate(${-anchorPosition.x * 100}%, ${-anchorPosition.y * 100}%)`
+          };
 
-    return createElement('div', {
-      className: `mapboxgl-popup mapboxgl-popup-anchor-${positionType} ${className}`,
-      style: containerStyle,
-      ref: this._onContainerLoad
-    }, [
-      this._renderTip(),
-      this._renderContent()
-    ]);
+          return createElement('div', {
+            className: `mapboxgl-popup mapboxgl-popup-anchor-${positionType} ${className}`,
+            style: containerStyle,
+            ref: this._onContainerLoad
+          }, [
+            this._renderTip(),
+            this._renderContent()
+          ]);
+        }
+      )
+    );
+
   }
 
 }

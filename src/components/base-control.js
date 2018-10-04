@@ -17,9 +17,10 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-import {Component} from 'react';
+import {Component, createElement} from 'react';
 import PropTypes from 'prop-types';
-import WebMercatorViewport from 'viewport-mercator-project';
+// import WebMercatorViewport from 'viewport-mercator-project';
+import {InteractiveContext} from './interactive-map';
 
 const propTypes = {
   /** Event handling */
@@ -39,11 +40,11 @@ const defaultProps = {
   captureDoubleClick: true
 };
 
-const contextTypes = {
-  viewport: PropTypes.instanceOf(WebMercatorViewport),
-  isDragging: PropTypes.bool,
-  eventManager: PropTypes.object
-};
+// const contextTypes = {
+//   viewport: PropTypes.instanceOf(WebMercatorViewport),
+//   isDragging: PropTypes.bool,
+//   eventManager: PropTypes.object
+// };
 
 /*
  * PureComponent doesn't update when context changes.
@@ -62,43 +63,57 @@ export default class BaseControl extends Component {
   }
 
   componentWillUnmount() {
-    const {eventManager} = this.context;
-    if (eventManager && this._events) {
-      eventManager.off(this._events);
-    }
+    return (
+      createElement(InteractiveContext.Consumer,
+        null, context => {
+          const {eventManager} = context;
+          if (eventManager && this._events) {
+            eventManager.off(this._events);
+          }
+        }
+      )
+    );
+
   }
 
   _onContainerLoad = (ref) => {
-    this._containerRef = ref;
+    return (
+      createElement(InteractiveContext.Consumer,
+        null, context => {
+          this._containerRef = ref;
 
-    const {eventManager} = this.context;
+          const {eventManager} = context;
 
-    // Return early if no eventManager is found
-    if (!eventManager) {
-      return;
-    }
+          // Return early if no eventManager is found
+          if (!eventManager) {
+            return;
+          }
 
-    let events = this._events;
+          let events = this._events;
 
-    // Remove all previously registered events
-    if (events) {
-      eventManager.off(events);
-      events = null;
-    }
+          // Remove all previously registered events
+          if (events) {
+            eventManager.off(events);
+            events = null;
+          }
 
-    if (ref) {
-      // container is mounted: register events for this element
-      events = {
-        wheel: this._onScroll,
-        panstart: this._onDragStart,
-        click: this._onClick,
-        dblclick: this._onDoubleClick
-      };
+          if (ref) {
+            // container is mounted: register events for this element
+            events = {
+              wheel: this._onScroll,
+              panstart: this._onDragStart,
+              click: this._onClick,
+              dblclick: this._onDoubleClick
+            };
 
-      eventManager.on(events, ref);
-    }
+            eventManager.on(events, ref);
+          }
 
-    this._events = events;
+          this._events = events;
+        }
+      )
+    );
+
   }
 
   _onScroll = (evt) => {
@@ -133,4 +148,4 @@ export default class BaseControl extends Component {
 
 BaseControl.propTypes = propTypes;
 BaseControl.defaultProps = defaultProps;
-BaseControl.contextTypes = contextTypes;
+// BaseControl.contextTypes = contextTypes;

@@ -17,8 +17,11 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
+import {createElement} from 'react';
 import PropTypes from 'prop-types';
 import BaseControl from './base-control';
+// import {InteractiveContext} from "./interactive-map";
 
 const propTypes = Object.assign({}, BaseControl.propTypes, {
   draggable: PropTypes.bool,
@@ -46,28 +49,40 @@ export default class DraggableControl extends BaseControl {
   }
 
   _setupDragEvents() {
-    const {eventManager} = this.context;
-    if (!eventManager) {
-      return;
-    }
+    return (
+      createElement('InteractiveContext.Consumer',
+        null, context => {
+          const {eventManager} = context;
+          if (!eventManager) {
+            return;
+          }
 
-    // panstart is already attached by parent class BaseControl,
-    // here we just add listeners for subsequent drag events
-    this._dragEvents = {
-      panmove: this._onDrag,
-      panend: this._onDragEnd,
-      pancancel: this._onDragCancel
-    };
-    eventManager.on(this._dragEvents);
+          // panstart is already attached by parent class BaseControl,
+          // here we just add listeners for subsequent drag events
+          this._dragEvents = {
+            panmove: this._onDrag,
+            panend: this._onDragEnd,
+            pancancel: this._onDragCancel
+          };
+          eventManager.on(this._dragEvents);
+        }
+      )
+    );
   }
 
   _removeDragEvents() {
-    const {eventManager} = this.context;
-    if (!eventManager || !this._dragEvents) {
-      return;
-    }
-    eventManager.off(this._dragEvents);
-    this._dragEvents = null;
+    return (
+      createElement('InteractiveContext.Consumer',
+        null, context => {
+          const {eventManager} = context;
+          if (!eventManager || !this._dragEvents) {
+            return;
+          }
+          eventManager.off(this._dragEvents);
+          this._dragEvents = null;
+        }
+      )
+    );
   }
 
   _getDragEventPosition(event) {
@@ -93,9 +108,16 @@ export default class DraggableControl extends BaseControl {
   }
 
   _getDragLngLat(dragPos, dragOffset) {
-    return this.context.viewport.unproject(
-      this._getDraggedPosition(dragPos, dragOffset)
+    return (
+      createElement('InteractiveContext.Consumer',
+        null, context => {
+          return context.viewport.unproject(
+            this._getDraggedPosition(dragPos, dragOffset)
+          );
+        }
+      )
     );
+
   }
 
   _onDragStart = (event) => {
