@@ -24,6 +24,10 @@ import PropTypes from 'prop-types';
 import Immutable from 'immutable';
 import {document} from '../utils/globals';
 
+
+import {InteractiveContext} from '../../src/components/interactive-map';
+
+
 function noop() {}
 
 // Makes working with SVG transforms a little nicer
@@ -63,10 +67,10 @@ const defaultProps = {
   isDragging: false
 };
 
-const contextTypes = {
-  viewport: PropTypes.object,
-  isDragging: PropTypes.bool
-};
+// const contextTypes = {
+//   viewport: PropTypes.object,
+//   isDragging: PropTypes.bool
+// };
 
 export default class DraggablePointsOverlay extends Component {
 
@@ -86,11 +90,19 @@ export default class DraggablePointsOverlay extends Component {
   }
 
   _onDrag(event) {
-    event.stopPropagation();
-    const pixel = mouse(this.refs.container, event);
-    const lngLat = this.context.viewport.unproject(pixel);
-    const key = this.state.draggedPointKey;
-    this.props.onUpdatePoint({key, location: lngLat});
+
+    return (
+      createElement('InteractiveContext.Consumer',
+        null, context => {
+          event.stopPropagation();
+          const pixel = mouse(this.refs.container, event);
+          const lngLat = context.viewport.unproject(pixel);
+          const key = this.state.draggedPointKey;
+          this.props.onUpdatePoint({key, location: lngLat});
+        }
+      )
+    );
+
   }
 
   _onDragEnd(event) {
@@ -101,48 +113,62 @@ export default class DraggablePointsOverlay extends Component {
   }
 
   _addPoint(event) {
-    event.stopPropagation();
-    event.preventDefault();
-    const pixel = mouse(this.refs.container, event);
-    this.props.onAddPoint(this.context.viewport.unproject(pixel));
+    return (
+      createElement('InteractiveContext.Consumer',
+        null, context => {
+          event.stopPropagation();
+          event.preventDefault();
+          const pixel = mouse(this.refs.container, event);
+          this.props.onAddPoint(context.viewport.unproject(pixel));
+        }
+      )
+    );
+
+
   }
 
   render() {
-    const {viewport, isDragging} = this.context;
-    const {points, style} = this.props;
-
     return (
-      createElement('svg', {
-        ref: 'container',
-        width: viewport.width,
-        height: viewport.height,
-        style: Object.assign({
-          pointerEvents: 'all',
-          position: 'absolute',
-          left: 0,
-          top: 0,
-          cursor: isDragging ? '-webkit-grabbing' : '-webkit-grab'
-        }, style),
-        onContextMenu: this._addPoint
-      }, [
-        createElement('g', {
-          style: {cursor: 'pointer'}
-        },
-          points.map((point, index) => {
-            const pixel = viewport.project(this.props.lngLatAccessor(point));
-            return (
+      createElement('InteractiveContext.Consumer',
+        null, context => {
+          const {viewport, isDragging} = context;
+          const {points, style} = this.props;
+
+          return (
+            createElement('svg', {
+              ref: 'container',
+              width: viewport.width,
+              height: viewport.height,
+              style: Object.assign({
+                pointerEvents: 'all',
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                cursor: isDragging ? '-webkit-grabbing' : '-webkit-grab'
+              }, style),
+              onContextMenu: this._addPoint
+            }, [
               createElement('g', {
-                key: index,
-                style: {pointerEvents: 'all'},
-                transform: svgTransform([{translate: pixel}]),
-                onMouseDown: this._onDragStart.bind(this, point)
-              },
-                this.props.renderPoint.call(this, point, pixel)
+                  style: {cursor: 'pointer'}
+                },
+                points.map((point, index) => {
+                  const pixel = viewport.project(this.props.lngLatAccessor(point));
+                  return (
+                    createElement('g', {
+                        key: index,
+                        style: {pointerEvents: 'all'},
+                        transform: svgTransform([{translate: pixel}]),
+                        onMouseDown: this._onDragStart.bind(this, point)
+                      },
+                      this.props.renderPoint.call(this, point, pixel)
+                    )
+                  );
+                })
               )
-            );
-          })
-        )
-      ])
+            ])
+          );
+        }
+      )
     );
   }
 }
@@ -150,4 +176,4 @@ export default class DraggablePointsOverlay extends Component {
 DraggablePointsOverlay.displayName = 'DraggablePointsOverlay';
 DraggablePointsOverlay.propTypes = propTypes;
 DraggablePointsOverlay.defaultProps = defaultProps;
-DraggablePointsOverlay.contextTypes = contextTypes;
+//DraggablePointsOverlay.contextTypes = contextTypes;

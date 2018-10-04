@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // Copyright (c) 2015 Uber Technologies, Inc.
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -17,12 +18,13 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-import React, {Component} from 'react';
+import React, {Component, createElement} from 'react';
 import PropTypes from 'prop-types';
 import {extent} from 'd3-array';
 import {scaleLinear} from 'd3-scale';
 import {geoPath, geoTransform} from 'd3-geo';
 import Immutable from 'immutable';
+import {InteractiveContext} from '../../src/components/interactive-map';
 /* global window */
 
 const propTypes = {
@@ -46,10 +48,10 @@ const defaultProps = {
   valueAccessor: feature => feature.get('properties').get('value')
 };
 
-const contextTypes = {
-  viewport: PropTypes.object,
-  isDragging: PropTypes.bool
-};
+// const contextTypes = {
+//   viewport: PropTypes.object,
+//   isDragging: PropTypes.bool
+// };
 
 export default class ChoroplethOverlay extends Component {
   componentDidMount() {
@@ -61,28 +63,35 @@ export default class ChoroplethOverlay extends Component {
   }
 
   _redraw() {
-    const pixelRatio = window.devicePixelRatio;
-    const canvas = this.refs.overlay;
-    const ctx = canvas.getContext('2d');
-    const {viewport, isDragging} = this.context;
+    return (
+      createElement('InteractiveContext.Consumer',
+        null, context => {
+          const pixelRatio = window.devicePixelRatio;
+          const canvas = this.refs.overlay;
+          const ctx = canvas.getContext('2d');
+          const {viewport, isDragging} = context;
 
-    ctx.save();
-    ctx.scale(pixelRatio, pixelRatio);
-    ctx.clearRect(0, 0, viewport.width, viewport.height);
+          ctx.save();
+          ctx.scale(pixelRatio, pixelRatio);
+          ctx.clearRect(0, 0, viewport.width, viewport.height);
 
-    function projectPoint(lon, lat) {
-      const point = viewport.project([lon, lat]);
-      /* eslint-disable no-invalid-this */
-      this.stream.point(point[0], point[1]);
-      /* eslint-enable no-invalid-this */
-    }
+          function projectPoint(lon, lat) {
+            const point = viewport.project([lon, lat]);
+            /* eslint-disable no-invalid-this */
+            this.stream.point(point[0], point[1]);
+            /* eslint-enable no-invalid-this */
+          }
 
-    if (this.props.renderWhileDragging || !isDragging) {
-      const transform = geoTransform({point: projectPoint});
-      const path = geoPath().projection(transform).context(ctx);
-      this._drawFeatures(ctx, path);
-    }
-    ctx.restore();
+          if (this.props.renderWhileDragging || !isDragging) {
+            const transform = geoTransform({point: projectPoint});
+            const path = geoPath().projection(transform).context(ctx);
+            this._drawFeatures(ctx, path);
+          }
+          ctx.restore();
+        }
+      )
+    );
+
   }
 
   _drawFeatures(ctx, path) {
@@ -114,26 +123,33 @@ export default class ChoroplethOverlay extends Component {
   }
 
   render() {
-    const {viewport: {width, height}} = this.context;
-    const pixelRatio = window.devicePixelRatio || 1;
     return (
-      <canvas
-        ref="overlay"
-        width={ width * pixelRatio }
-        height={ height * pixelRatio }
-        style={ {
-          width: `${width}px`,
-          height: `${height}px`,
-          position: 'absolute',
-          pointerEvents: 'none',
-          opacity: this.props.globalOpacity,
-          left: 0,
-          top: 0
-        } }/>
+      createElement('InteractiveContext.Consumer',
+        null, context => {
+          const {viewport: {width, height}} = context;
+          const pixelRatio = window.devicePixelRatio || 1;
+          return (
+            <canvas
+              ref="overlay"
+              width={ width * pixelRatio }
+              height={ height * pixelRatio }
+              style={ {
+                width: `${width}px`,
+                height: `${height}px`,
+                position: 'absolute',
+                pointerEvents: 'none',
+                opacity: this.props.globalOpacity,
+                left: 0,
+                top: 0
+              } }/>
+          );
+        }
+      )
     );
+
   }
 }
 
 ChoroplethOverlay.propTypes = propTypes;
 ChoroplethOverlay.defaultProps = defaultProps;
-ChoroplethOverlay.contextTypes = contextTypes;
+// ChoroplethOverlay.contextTypes = contextTypes;

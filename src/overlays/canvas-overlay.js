@@ -22,6 +22,7 @@ import {createElement} from 'react';
 import PropTypes from 'prop-types';
 import BaseControl from '../components/base-control';
 import {window} from '../utils/globals';
+// import {InteractiveContext} from "../components/interactive-map";
 
 const propTypes = Object.assign({}, BaseControl.propTypes, {
   redraw: PropTypes.func.isRequired
@@ -48,23 +49,30 @@ export default class CanvasOverlay extends BaseControl {
   }
 
   _redraw = () => {
-    const pixelRatio = window.devicePixelRatio || 1;
-    const canvas = this._canvas;
-    const ctx = canvas.getContext('2d');
-    ctx.save();
-    ctx.scale(pixelRatio, pixelRatio);
+    return (
+      createElement('InteractiveContext.Consumer',
+        null, context => {
+          const pixelRatio = window.devicePixelRatio || 1;
+          const canvas = this._canvas;
+          const ctx = canvas.getContext('2d');
+          ctx.save();
+          ctx.scale(pixelRatio, pixelRatio);
 
-    const {viewport, isDragging} = this.context;
-    this.props.redraw({
-      width: viewport.width,
-      height: viewport.height,
-      ctx,
-      isDragging,
-      project: viewport.project.bind(viewport),
-      unproject: viewport.unproject.bind(viewport)
-    });
+          const {viewport, isDragging} = context;
+          this.props.redraw({
+            width: viewport.width,
+            height: viewport.height,
+            ctx,
+            isDragging,
+            project: viewport.project.bind(viewport),
+            unproject: viewport.unproject.bind(viewport)
+          });
 
-    ctx.restore();
+          ctx.restore();
+        }
+      )
+    );
+
   }
 
   _canvasLoaded = (ref) => {
@@ -73,23 +81,30 @@ export default class CanvasOverlay extends BaseControl {
   }
 
   render() {
-    const pixelRatio = window.devicePixelRatio || 1;
-    const {viewport: {width, height}} = this.context;
-
     return (
-      createElement('canvas', {
-        ref: this._canvasLoaded,
-        width: width * pixelRatio,
-        height: height * pixelRatio,
-        style: {
-          width: `${width}px`,
-          height: `${height}px`,
-          position: 'absolute',
-          left: 0,
-          top: 0
+      createElement('InteractiveContext.Consumer',
+        null, context => {
+          const pixelRatio = window.devicePixelRatio || 1;
+          const {viewport: {width, height}} = context;
+
+          return (
+            createElement('canvas', {
+              ref: this._canvasLoaded,
+              width: width * pixelRatio,
+              height: height * pixelRatio,
+              style: {
+                width: `${width}px`,
+                height: `${height}px`,
+                position: 'absolute',
+                left: 0,
+                top: 0
+              }
+            })
+          );
         }
-      })
+      )
     );
+
   }
 }
 

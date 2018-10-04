@@ -21,6 +21,7 @@
 import {createElement} from 'react';
 import PropTypes from 'prop-types';
 import BaseControl from '../components/base-control';
+// import {InteractiveContext} from "../components/interactive-map";
 
 const propTypes = Object.assign({}, BaseControl.propTypes, {
   redraw: PropTypes.func.isRequired,
@@ -36,27 +37,33 @@ const defaultProps = {
 
 export default class SVGOverlay extends BaseControl {
   render() {
-    const {viewport, isDragging} = this.context;
-    const style = Object.assign({
-      position: 'absolute',
-      left: 0,
-      top: 0
-    }, this.props.style);
-
     return (
-      createElement('svg', {
-        width: viewport.width,
-        height: viewport.height,
-        ref: this._onContainerLoad,
-        style
-      },
-        this.props.redraw({
-          width: viewport.width,
-          height: viewport.height,
-          isDragging,
-          project: viewport.project.bind(viewport),
-          unproject: viewport.unproject.bind(viewport)
-        })
+      createElement('InteractiveContext.Consumer',
+        null, context => {
+          const {viewport, isDragging} = context;
+          const style = Object.assign({
+            position: 'absolute',
+            left: 0,
+            top: 0
+          }, this.props.style);
+
+          return (
+            createElement('svg', {
+              width: viewport.width,
+              height: viewport.height,
+              ref: this._onContainerLoad,
+              style
+            },
+              this.props.redraw({
+                width: viewport.width,
+                height: viewport.height,
+                isDragging,
+                project: viewport.project.bind(viewport),
+                unproject: viewport.unproject.bind(viewport)
+              })
+            )
+          );
+        }
       )
     );
   }
