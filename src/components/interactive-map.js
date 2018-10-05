@@ -153,6 +153,8 @@ export default class InteractiveMap extends PureComponent {
     deprecateWarn(props);
 
     this.state = {
+      width: 0,
+      height: 0,
       // Whether the cursor is down
       isDragging: false,
       // Whether the cursor is over a clickable feature
@@ -173,7 +175,10 @@ export default class InteractiveMap extends PureComponent {
 
   getChildContext() {
     return {
-      viewport: new WebMercatorViewport(this.props),
+      viewport: new WebMercatorViewport(Object.assign({}, this.props, {
+        width: this.state.width,
+        height: this.state.height
+      })),
       isDragging: this.state.isDragging,
       eventManager: this._eventManager
     };
@@ -214,7 +219,9 @@ export default class InteractiveMap extends PureComponent {
         props.onViewportChange || props.onChangeViewport),
       onViewportChange: this._onViewportChange,
       onStateChange: this._onInteractionStateChange,
-      eventManager: this._eventManager
+      eventManager: this._eventManager,
+      width: this.state.width,
+      height: this.state.height
     });
 
     this._mapControls.setOptions(props);
@@ -255,6 +262,12 @@ export default class InteractiveMap extends PureComponent {
     const onViewStateChange = this.props.onViewStateChange;
     const onViewportChange = this.props.onViewportChange || this.props.onChangeViewport;
 
+    if (viewState.width !== oldViewState.width || viewState.height !== oldViewState.height) {
+      this.setState({
+        width: viewState.width,
+        height: viewState.height
+      });
+    }
     if (onViewStateChange) {
       onViewStateChange({viewState, interactionState, oldViewState});
     }
@@ -316,14 +329,17 @@ export default class InteractiveMap extends PureComponent {
   }
 
   render() {
-    const {width, height, getCursor} = this.props;
+    const {width, height, style, getCursor} = this.props;
 
-    const eventCanvasStyle = {
+    const eventCanvasStyle = Object.assign({}, style, {
       width,
       height,
-      position: 'relative',
       cursor: getCursor(this.state)
-    };
+    });
+
+    if (!eventCanvasStyle.position || eventCanvasStyle.position === 'static') {
+      eventCanvasStyle.position = 'relative';
+    }
 
     return (
       createElement('div', {
@@ -333,6 +349,10 @@ export default class InteractiveMap extends PureComponent {
       },
         createElement(StaticMap, Object.assign({}, this.props,
           {
+            width: '100%',
+            height: '100%',
+            style: {position: 'absolute'},
+            onViewportChange: this._onViewportChange,
             ref: this._staticMapLoaded,
             children: this.props.children
           }

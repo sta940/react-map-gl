@@ -23,10 +23,13 @@ import PropTypes from 'prop-types';
 import {normalizeStyle} from '../utils/style-utils';
 
 import WebMercatorViewport from 'viewport-mercator-project';
+import AutoSizer from 'react-virtualized-auto-sizer';
 
 import Mapbox from '../mapbox/mapbox';
 import mapboxgl from '../utils/mapboxgl';
 import {checkVisibilityConstraints} from '../utils/map-constraints';
+
+import MapState from '../utils/map-state';
 
 /* eslint-disable max-len */
 const TOKEN_DOC_URL = 'https://uber.github.io/react-map-gl/#/Documentation/getting-started/about-mapbox-tokens';
@@ -36,6 +39,15 @@ const NO_TOKEN_WARNING = 'A valid API access token is required to use Mapbox dat
 function noop() {}
 
 const UNAUTHORIZED_ERROR_CODE = 401;
+
+const OVERLAY_CONTAINER_STYLE = {
+  position: 'absolute',
+  left: 0,
+  top: 0,
+  right: 0,
+  bottom: 0,
+  overflow: 'hidden'
+};
 
 const propTypes = Object.assign({}, Mapbox.propTypes, {
   /** The Mapbox style. A string url or a MapboxGL style Immutable.Map object. */
@@ -49,6 +61,9 @@ const propTypes = Object.assign({}, Mapbox.propTypes, {
   disableTokenWarning: PropTypes.bool,
   /** Whether the map is visible */
   visible: PropTypes.bool,
+
+  width: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  height: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
 
   /** Advanced features */
   // Contraints for displaying the map. If not met, then the map is hidden.
@@ -81,13 +96,18 @@ export default class StaticMap extends PureComponent {
       this.componentWillUnmount = noop;
     }
     this.state = {
+      width: 0,
+      height: 0,
       accessTokenInvalid: false
     };
   }
 
   getChildContext() {
     return {
-      viewport: new WebMercatorViewport(this.props)
+      viewport: new WebMercatorViewport(Object.assign({}, this.props, {
+        width: this.state.width,
+        height: this.state.height
+      }))
     };
   }
 
@@ -106,20 +126,10 @@ export default class StaticMap extends PureComponent {
   componentWillReceiveProps(newProps) {
     this._mapbox.setProps(newProps);
     this._updateMapStyle(this.props, newProps);
-
-    // this._updateMapViewport(this.props, newProps);
-
-    // Save width/height so that we can check them in componentDidUpdate
-    this.setState({
-      width: this.props.width,
-      height: this.props.height
-    });
   }
 
-  componentDidUpdate() {
-    // Since Mapbox's map.resize() reads size from DOM
-    // we must wait to read size until after render (i.e. here in "didUpdate")
-    this._updateMapSize(this.state, this.props);
+  componentDidUpdate(prevProps, prevState) {
+    this._updateMapSize(prevState, this.state);
   }
 
   componentWillUnmount() {
@@ -146,6 +156,22 @@ export default class StaticMap extends PureComponent {
     return this._map.queryRenderedFeatures(geometry, options);
   }
 
+  _onResize = ({width, height}) => {
+    if (this.props.onViewportChange) {
+      const oldViewState = new MapState(Object.assign({}, this.props, {
+        width: this.state.width,
+        height: this.state.height
+      })).getViewportProps();
+      const newViewState = new MapState(Object.assign({}, this.props, {
+        width,
+        height
+      })).getViewportProps();
+
+      this.props.onViewportChange(newViewState, {}, oldViewState);
+    }
+    this.setState({width, height});
+  }
+
   // Note: needs to be called after render (e.g. in componentDidUpdate)
   _updateMapSize(oldProps, newProps) {
     const sizeChanged =
@@ -153,7 +179,6 @@ export default class StaticMap extends PureComponent {
 
     if (sizeChanged) {
       this._map.resize();
-      // this._callOnChangeViewport(this._map.transform);
     }
   }
 
@@ -200,23 +225,19 @@ export default class StaticMap extends PureComponent {
 
   render() {
     const {className, width, height, style, visibilityConstraints} = this.props;
-    const mapContainerStyle = Object.assign({}, style, {width, height, position: 'relative'});
+    const mapContainerStyle = Object.assign({}, style, {width, height});
+
+    if (!mapContainerStyle.position || mapContainerStyle.position === 'static') {
+      mapContainerStyle.position = 'relative';
+    }
 
     const visible = this.props.visible &&
       checkVisibilityConstraints(this.props.viewState || this.props, visibilityConstraints);
 
-    const mapStyle = Object.assign({}, style, {
-      width,
-      height,
+    const mapStyle = {
+      width: this.state.width,
+      height: this.state.height,
       visibility: visible ? 'visible' : 'hidden'
-    });
-    const overlayContainerStyle = {
-      position: 'absolute',
-      left: 0,
-      top: 0,
-      width,
-      height,
-      overflow: 'hidden'
     };
 
     // Note: a static map still handles clicks and hover events
@@ -235,8 +256,13 @@ export default class StaticMap extends PureComponent {
             key: 'map-overlays',
             // Same as interactive map's overlay container
             className: 'overlays',
-            style: overlayContainerStyle,
+            style: OVERLAY_CONTAINER_STYLE,
             children: this.props.children
+          }),
+          createElement(AutoSizer, {
+            key: 'autosizer',
+            onResize: this._onResize,
+            children: noop
           }),
           this._renderNoTokenWarning()
         ]

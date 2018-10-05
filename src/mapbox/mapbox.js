@@ -201,6 +201,7 @@ export default class Mapbox {
         bearing: 0,
         style: props.mapStyle,
         interactive: false,
+        trackResize: false,
         attributionControl: props.attributionControl,
         preserveDrawingBuffer: props.preserveDrawingBuffer
       };

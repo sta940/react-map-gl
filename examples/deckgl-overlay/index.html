@@ -6,9 +6,10 @@
     <link rel="stylesheet" type="text/css" href="app.css" />
   </head>
   <body>
-    <script src='app.js'></script>
+    <div id="app" style="width: 100vw; height: 100vh;"></div>
   </body>
+  <script src='app.js'></script>
   <script type="text/javascript">
-    App.renderToDom();
+    App.renderToDom(document.getElementById('app'));
   </script>
 </html>
